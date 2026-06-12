@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
@@ -12,6 +13,12 @@ public class GameController : MonoBehaviour
     public ArrowFactory arrowFactory;
     public Transform boardRoot;
 
+    [Header("Win UI")]
+    public GameObject winPanel;
+    public Button nextLevelButton;
+    public Button exitGameButton;
+
+    private int currentLevelId;
     private GameState currentState = GameState.None;
     private BoardModel boardModel;
     private LevelData currentLevelData;
@@ -50,6 +57,8 @@ public class GameController : MonoBehaviour
 
     public void StartGame(int levelId)
     {
+        currentLevelId = levelId;
+        HideWinPanel();
         SetGameState(GameState.Loading);
         ClearCurrentLevel();
 
@@ -197,17 +206,21 @@ public class GameController : MonoBehaviour
 
     public void CheckWin()
     {
-        if (remainingArrowCount <= 0)
+        if (remainingArrowCount > 0)
         {
-            SetGameState(GameState.Win);
-
-            if (inputController != null)
-            {
-                inputController.SetInputEnabled(false);
-            }
-
-            Debug.Log("Level Complete");
+            return;
         }
+
+        SetGameState(GameState.Win);
+
+        if (inputController != null)
+        {
+            inputController.SetInputEnabled(false);
+        }
+
+        Debug.Log("Level Complete");
+
+        ShowWinPanel();
     }
 
     public void SetGameState(GameState state)
@@ -220,5 +233,73 @@ public class GameController : MonoBehaviour
     {
         int levelId = currentLevelData != null ? currentLevelData.levelId : startLevelId;
         StartGame(levelId);
+    }
+
+    private void ShowWinPanel()
+    {
+        if (winPanel != null)
+        {
+            winPanel.SetActive(true);
+        }
+
+        bool hasNextLevel = levelLoader != null && levelLoader.HasLevel(currentLevelId + 1);
+
+        if (nextLevelButton != null)
+        {
+            nextLevelButton.gameObject.SetActive(hasNextLevel);
+            nextLevelButton.onClick.RemoveAllListeners();
+            nextLevelButton.onClick.AddListener(LoadNextLevel);
+        }
+
+        if (exitGameButton != null)
+        {
+            exitGameButton.gameObject.SetActive(!hasNextLevel);
+            exitGameButton.onClick.RemoveAllListeners();
+            exitGameButton.onClick.AddListener(ExitGame);
+        }
+    }
+
+    private void HideWinPanel()
+    {
+        if (winPanel != null)
+        {
+            winPanel.SetActive(false);
+        }
+
+        if (nextLevelButton != null)
+        {
+            nextLevelButton.gameObject.SetActive(false);
+            nextLevelButton.onClick.RemoveAllListeners();
+        }
+
+        if (exitGameButton != null)
+        {
+            exitGameButton.gameObject.SetActive(false);
+            exitGameButton.onClick.RemoveAllListeners();
+        }
+    }
+
+    public void LoadNextLevel()
+    {
+        int nextLevelId = currentLevelId + 1;
+
+        if (levelLoader == null || !levelLoader.HasLevel(nextLevelId))
+        {
+            Debug.LogWarning($"Next level does not exist. levelId = {nextLevelId}");
+            return;
+        }
+
+        StartGame(nextLevelId);
+    }
+
+    public void ExitGame()
+    {
+        Debug.Log("Exit Game");
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+    Application.Quit();
+#endif
     }
 }

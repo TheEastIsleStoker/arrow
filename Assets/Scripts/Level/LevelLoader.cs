@@ -13,24 +13,25 @@ public class LevelLoader : MonoBehaviour
     [Header("Level Assets")]
     public List<LevelAssetEntry> levelAssets = new List<LevelAssetEntry>();
 
+    public bool HasLevel(int levelId)
+    {
+        return FindLevelJson(levelId) != null;
+    }
+
     public LevelData LoadLevel(int levelId)
     {
         TextAsset levelJson = FindLevelJson(levelId);
-
         if (levelJson == null)
         {
             Debug.LogError($"Level json not found. levelId = {levelId}");
             return null;
         }
-
         LevelData levelData = JsonUtility.FromJson<LevelData>(levelJson.text);
-
         if (levelData == null)
         {
             Debug.LogError($"Failed to parse level json. levelId = {levelId}");
             return null;
         }
-
         return levelData;
     }
 
