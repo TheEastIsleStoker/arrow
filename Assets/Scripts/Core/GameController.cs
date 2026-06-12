@@ -164,7 +164,9 @@ public class GameController : MonoBehaviour
         boardModel.RemoveArrow(arrowRoot.Data);
         arrowRoot.DisableHitArea();
 
-        arrowRoot.PlayFlyOutPlaceholder(() =>
+        Camera targetCamera = Camera.main;
+
+        arrowRoot.PlayFlyOut(targetCamera, () =>
         {
             OnArrowFlyOutFinished(arrowRoot);
         });
