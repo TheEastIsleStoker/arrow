@@ -32,6 +32,7 @@ public class InputController : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            Debug.Log("鼠标按下");
             HandleMouseClick();
         }
     }
@@ -51,6 +52,7 @@ public class InputController : MonoBehaviour
 
         if (hit == null)
         {
+            Debug.Log("未点击到任何对象");
             return;
         }
 
@@ -58,6 +60,7 @@ public class InputController : MonoBehaviour
 
         if (arrowRoot != null)
         {
+            Debug.Log($"点击到箭头: {arrowRoot.name}");
             gameController.OnArrowClicked(arrowRoot);
         }
     }

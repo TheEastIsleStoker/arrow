@@ -149,10 +149,12 @@ public class GameController : MonoBehaviour
 
         if (canFlyOut)
         {
+            Debug.Log($"箭头 {arrowRoot.Data.id} 能发射");
             HandleArrowCanFly(arrowRoot);
         }
         else
         {
+            Debug.Log($"箭头 {arrowRoot.Data.id} 被阻挡");
             HandleArrowBlocked(arrowRoot);
         }
     }
