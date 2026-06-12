@@ -3,35 +3,25 @@ using UnityEngine;
 
 public class ArrowFactory : MonoBehaviour
 {
-    [Header("Prefabs")]
-    public ArrowRoot arrowRootPrefab;
-    public GameObject segmentHitPrefab;
-
     [Header("Scene")]
     public Transform boardRoot;
 
     [Header("View")]
     public ArrowViewConfig viewConfig = new ArrowViewConfig();
 
+    [Header("Runtime Assets")]
+    public Sprite arrowHeadSprite;
+
     public ArrowRoot CreateArrow(ArrowData data, LevelData levelData)
     {
-        if (arrowRootPrefab == null)
-        {
-            Debug.LogError("ArrowFactory missing arrowRootPrefab.");
-            return null;
-        }
-
         if (data == null || data.path == null || data.path.Count < 2)
         {
             Debug.LogError("Invalid arrow data. Path must contain at least 2 points.");
             return null;
         }
 
-        Transform parent = boardRoot != null ? boardRoot : transform;
-        ArrowRoot arrowRoot = Instantiate(arrowRootPrefab, parent);
+        ArrowRoot arrowRoot = CreateArrowRootObject(data);
         arrowRoot.Initialize(data, viewConfig);
-
-        EnsureArrowReferences(arrowRoot);
 
         List<Vector3> worldPoints = new List<Vector3>();
 
@@ -65,39 +55,74 @@ public class ArrowFactory : MonoBehaviour
         return new Vector3(worldX, worldY, 0f);
     }
 
-    private void EnsureArrowReferences(ArrowRoot arrowRoot)
+    private ArrowRoot CreateArrowRootObject(ArrowData data)
     {
-        if (arrowRoot.BodyLine == null)
+        Transform parent = boardRoot != null ? boardRoot : transform;
+
+        GameObject rootObject = new GameObject($"ArrowRoot_{data.id}");
+        rootObject.transform.SetParent(parent);
+        rootObject.transform.localPosition = Vector3.zero;
+        rootObject.transform.localRotation = Quaternion.identity;
+        rootObject.transform.localScale = Vector3.one;
+
+        ArrowRoot arrowRoot = rootObject.AddComponent<ArrowRoot>();
+
+        GameObject bodyLineObject = new GameObject("BodyLine");
+        bodyLineObject.transform.SetParent(rootObject.transform);
+        bodyLineObject.transform.localPosition = Vector3.zero;
+        bodyLineObject.transform.localRotation = Quaternion.identity;
+        bodyLineObject.transform.localScale = Vector3.one;
+
+        LineRenderer lineRenderer = bodyLineObject.AddComponent<LineRenderer>();
+        ConfigureLineRenderer(lineRenderer);
+
+        GameObject arrowHeadObject = new GameObject("ArrowHead");
+        arrowHeadObject.transform.SetParent(rootObject.transform);
+        arrowHeadObject.transform.localPosition = Vector3.zero;
+        arrowHeadObject.transform.localRotation = Quaternion.identity;
+        arrowHeadObject.transform.localScale = new Vector3(0.5f, 0.6f, 1f);
+
+        SpriteRenderer spriteRenderer = arrowHeadObject.AddComponent<SpriteRenderer>();
+        spriteRenderer.sprite = arrowHeadSprite;
+        spriteRenderer.color = viewConfig.arrowColor;
+
+        if (viewConfig.lineMaterial != null)
         {
-            arrowRoot.BodyLine = arrowRoot.GetComponentInChildren<LineRenderer>();
+            spriteRenderer.material = viewConfig.lineMaterial;
         }
 
-        if (arrowRoot.HitArea == null)
+        GameObject hitAreaObject = new GameObject("HitArea");
+        hitAreaObject.transform.SetParent(rootObject.transform);
+        hitAreaObject.transform.localPosition = Vector3.zero;
+        hitAreaObject.transform.localRotation = Quaternion.identity;
+        hitAreaObject.transform.localScale = Vector3.one;
+
+        arrowRoot.BodyLine = lineRenderer;
+        arrowRoot.ArrowHead = arrowHeadObject.transform;
+        arrowRoot.HitArea = hitAreaObject.transform;
+
+        return arrowRoot;
+    }
+
+    private void ConfigureLineRenderer(LineRenderer lineRenderer)
+    {
+        lineRenderer.useWorldSpace = true;
+        lineRenderer.startWidth = viewConfig.bodyLineWidth;
+        lineRenderer.endWidth = viewConfig.bodyLineWidth;
+        lineRenderer.startColor = viewConfig.arrowColor;
+        lineRenderer.endColor = viewConfig.arrowColor;
+        lineRenderer.numCapVertices = 6;
+        lineRenderer.numCornerVertices = 6;
+        lineRenderer.alignment = LineAlignment.View;
+
+        if (viewConfig.lineMaterial != null)
         {
-            Transform hitArea = arrowRoot.transform.Find("HitArea");
-
-            if (hitArea == null)
-            {
-                GameObject hitAreaObject = new GameObject("HitArea");
-                hitAreaObject.transform.SetParent(arrowRoot.transform);
-                hitAreaObject.transform.localPosition = Vector3.zero;
-                hitAreaObject.transform.localRotation = Quaternion.identity;
-                hitAreaObject.transform.localScale = Vector3.one;
-                hitArea = hitAreaObject.transform;
-            }
-
-            arrowRoot.HitArea = hitArea;
+            lineRenderer.material = viewConfig.lineMaterial;
         }
     }
 
     private void CreateSegmentHits(ArrowRoot arrowRoot, ArrowData data, LevelData levelData)
     {
-        if (segmentHitPrefab == null)
-        {
-            Debug.LogWarning("ArrowFactory missing segmentHitPrefab. Click detection will not work.");
-            return;
-        }
-
         if (arrowRoot.HitArea == null)
         {
             Debug.LogWarning($"{arrowRoot.name} missing HitArea.");
@@ -111,9 +136,10 @@ public class ArrowFactory : MonoBehaviour
             Vector3 center = (start + end) * 0.5f;
             Vector3 delta = end - start;
 
-            GameObject segmentHit = Instantiate(segmentHitPrefab, arrowRoot.HitArea);
-            segmentHit.name = $"SegmentHit_{i}";
+            GameObject segmentHit = new GameObject($"SegmentHit_{i}");
+            segmentHit.transform.SetParent(arrowRoot.HitArea);
             segmentHit.transform.position = center;
+            segmentHit.transform.localScale = Vector3.one;
 
             if (Mathf.Abs(delta.y) > Mathf.Abs(delta.x))
             {
@@ -124,13 +150,9 @@ public class ArrowFactory : MonoBehaviour
                 segmentHit.transform.rotation = Quaternion.identity;
             }
 
-            BoxCollider2D boxCollider = segmentHit.GetComponent<BoxCollider2D>();
-
-            if (boxCollider != null)
-            {
-                boxCollider.size = viewConfig.segmentHitSize;
-                boxCollider.isTrigger = true;
-            }
+            BoxCollider2D boxCollider = segmentHit.AddComponent<BoxCollider2D>();
+            boxCollider.size = viewConfig.segmentHitSize;
+            boxCollider.isTrigger = true;
         }
     }
 }
